@@ -4,30 +4,9 @@
 #include <fstream>
 #include <string>
 #include <sstream>
-
-
-#define ASSERT(x) if (!(x)) __debugbreak()
-
-/* 反斜杠后面不能有空格 */
-#define GLCall(x)GLClearError();\
-    x;\
-    ASSERT(GLLogCall(#x, __FILE__, __LINE__));
-
-static void GLClearError()
-{
-    /* 循环获取错误(即清除) */
-    while (glGetError() != GL_NO_ERROR);
-}
-
-static bool GLLogCall(const char* function, const char* file, int line)
-{
-    while (GLenum error = glGetError()) {
-        std::cout << "[OpenGL Error] (" << error << "): "
-            << function << " " << file << ":" << line << std::endl;
-        return false;
-    }
-    return true;
-}
+#include "Renderer.h"
+#include "VertexBuffer.h"
+#include "IndexBuffer.h"
 
 struct ShaderProgramSource
 {
@@ -138,89 +117,86 @@ int main(void)
         std::cout << "Error!" << std::endl;
     std::cout << glGetString(GL_VERSION) << std::endl;
 
-    /* 顶点位置浮点型数组 */
-    float positions[] = 
     {
-        -0.5f, -0.5f, // 0
-        0.5f, -0.5f,  // 1
-        0.5f, 0.5f,   // 2
-        -0.5f, 0.5f,  // 3
-    };
-
-    /* 索引缓冲区所需索引数组 */
-    unsigned int indices[] = 
-    {
-        0, 1, 2,
-        2, 3, 0
-    };
-
-    unsigned int vao; /* 保存顶点数组对象ID */
-    GLCall(glGenVertexArrays(1, &vao)); /* 生存顶点数组 */
-    GLCall(glBindVertexArray(vao)); /* 绑定顶点数组 */
-
-    unsigned int buffer;
-    glGenBuffers(1, &buffer); /* 生成缓冲区 */
-    glBindBuffer(GL_ARRAY_BUFFER, buffer); /* 绑定缓冲区 */
-    glBufferData(GL_ARRAY_BUFFER, 4 * 2 * sizeof(float), positions, GL_STATIC_DRAW); /* 设置缓冲区数据 */
-
-    glEnableVertexAttribArray(0); /* 激活顶点属性-索引0-位置 */
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), 0); /* 设置顶点属性-索引0 */
-
-    unsigned int ibo;
-    glGenBuffers(1, &ibo);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, 6 * sizeof(unsigned int), indices, GL_STATIC_DRAW);
-
-     /* 从文件中解析着色器源码 */
-    ShaderProgramSource source = ParseShader("res/shaders/Basic.shader");
-    unsigned int shader = CreateShader(source.VertexSource, source.FragmentSource);
-
-    glUseProgram(shader); /* 使用着色器程序 */
-
-    GLCall(int location = glGetUniformLocation(shader, "u_Color"));
-    ASSERT(location != -1);
-    GLCall(glUniform4f(location, 0.2f, 0.3f, 0.8f, 1.0f));
-
-    /* 解绑 */
-    GLCall(glBindVertexArray(0));
-    GLCall(glUseProgram(0));
-    GLCall(glBindBuffer(GL_ARRAY_BUFFER, 0));
-    GLCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0));
-
-    float r = 0.0f;
-    float increment = 0.05f;
-
-    /* Loop until the user closes the window */
-    while (!glfwWindowShouldClose(window))
-    {
-        /* Render here */
-        glClear(GL_COLOR_BUFFER_BIT);
-
-        GLCall(glUseProgram(shader));
-        GLCall(glUniform4f(location, r, 0.3f, 0.8f, 1.0f));
-
-        GLCall(glBindVertexArray(vao));
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
-
-        GLCall(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr)); // 绘制
-
-        if (r > 1.0f) 
+        /* 顶点位置浮点型数组 */
+        float positions[] =
         {
-            increment = -0.05f;
-        }
-        else if (r < 0.0f) 
+            -0.5f, -0.5f, // 0
+            0.5f, -0.5f,  // 1
+            0.5f, 0.5f,   // 2
+            -0.5f, 0.5f,  // 3
+        };
+
+        /* 索引缓冲区所需索引数组 */
+        unsigned int indices[] =
         {
-            increment = 0.05f;
+            0, 1, 2,
+            2, 3, 0
+        };
+
+        unsigned int vao; /* 保存顶点数组对象ID */
+        GLCall(glGenVertexArrays(1, &vao)); /* 生存顶点数组 */
+        GLCall(glBindVertexArray(vao)); /* 绑定顶点数组 */
+
+        VertexBuffer vb(positions, 4 * 2 * sizeof(float));
+
+        glEnableVertexAttribArray(0); /* 激活顶点属性-索引0-位置 */
+        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), 0); /* 设置顶点属性-索引0 */
+
+        IndexBuffer ib(indices, 6);
+
+        /* 从文件中解析着色器源码 */
+        ShaderProgramSource source = ParseShader("res/shaders/Basic.shader");
+        unsigned int shader = CreateShader(source.VertexSource, source.FragmentSource);
+
+        glUseProgram(shader); /* 使用着色器程序 */
+
+        int location;
+        GLCall(location = glGetUniformLocation(shader, "u_Color")); /* 获取指定名称统一变量的位置 */
+        ASSERT(location != -1);
+        GLCall(glUniform4f(location, 0.2f, 0.3f, 0.8f, 1.0f)); /* 设置对应的统一变量 */
+
+        /* 解绑 */
+        GLCall(glBindVertexArray(0));
+        GLCall(glUseProgram(0));
+        GLCall(glBindBuffer(GL_ARRAY_BUFFER, 0));
+        GLCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0));
+
+        float r = 0.0f;
+        float increment = 0.05f;
+
+        /* Loop until the user closes the window */
+        while (!glfwWindowShouldClose(window))
+        {
+            /* Render here */
+            glClear(GL_COLOR_BUFFER_BIT);
+
+            GLCall(glUseProgram(shader));
+            GLCall(glUniform4f(location, r, 0.3f, 0.8f, 1.0f));
+
+            GLCall(glBindVertexArray(vao));
+            ib.Bind();
+
+            GLCall(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr)); // 绘制
+
+            if (r > 1.0f)
+            {
+                increment = -0.05f;
+            }
+            else if (r < 0.0f)
+            {
+                increment = 0.05f;
+            }
+            r += increment;
+
+            /* Swap front and back buffers */
+            glfwSwapBuffers(window);
+
+            /* Poll for and process events */
+            glfwPollEvents();
         }
-        r += increment;
-
-        /* Swap front and back buffers */
-        glfwSwapBuffers(window);
-
-        /* Poll for and process events */
-        glfwPollEvents();
+        glDeleteProgram(shader); // 删除着色器程序
     }
-    glDeleteProgram(shader); // 删除着色器程序
     glfwTerminate();
     return 0;
 }
