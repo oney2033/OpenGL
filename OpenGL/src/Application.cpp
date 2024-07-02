@@ -6,6 +6,29 @@
 #include <sstream>
 
 
+#define ASSERT(x) if (!(x)) __debugbreak()
+
+/* 反斜杠后面不能有空格 */
+#define GLCall(x)GLClearError();\
+    x;\
+    ASSERT(GLLogCall(#x, __FILE__, __LINE__));
+
+static void GLClearError()
+{
+    /* 循环获取错误(即清除) */
+    while (glGetError() != GL_NO_ERROR);
+}
+
+static bool GLLogCall(const char* function, const char* file, int line)
+{
+    while (GLenum error = glGetError()) {
+        std::cout << "[OpenGL Error] (" << error << "): "
+            << function << " " << file << ":" << line << std::endl;
+        return false;
+    }
+    return true;
+}
+
 struct ShaderProgramSource
 {
     std::string VertexSource;
@@ -151,7 +174,7 @@ int main(void)
         /* Render here */
         glClear(GL_COLOR_BUFFER_BIT);
 
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr); // 绘制
+        GLCall(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr)); // 绘制
 
         /* Swap front and back buffers */
         glfwSwapBuffers(window);
