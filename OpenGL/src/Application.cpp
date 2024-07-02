@@ -118,6 +118,11 @@ int main(void)
     if (!glfwInit())
         return -1;
 
+    //指定版本和兼容性配置文件
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+
     /* Create a windowed mode window and its OpenGL context */
     window = glfwCreateWindow(640, 480, "Hello World", NULL, NULL);
     if (!window)
@@ -128,7 +133,7 @@ int main(void)
 
     /* Make the window's context current */
     glfwMakeContextCurrent(window);
-
+    glfwSwapInterval(1);
     if (glewInit() != GLEW_OK)
         std::cout << "Error!" << std::endl;
     std::cout << glGetString(GL_VERSION) << std::endl;
@@ -149,6 +154,10 @@ int main(void)
         2, 3, 0
     };
 
+    unsigned int vao; /* 保存顶点数组对象ID */
+    GLCall(glGenVertexArrays(1, &vao)); /* 生存顶点数组 */
+    GLCall(glBindVertexArray(vao)); /* 绑定顶点数组 */
+
     unsigned int buffer;
     glGenBuffers(1, &buffer); /* 生成缓冲区 */
     glBindBuffer(GL_ARRAY_BUFFER, buffer); /* 绑定缓冲区 */
@@ -168,13 +177,42 @@ int main(void)
 
     glUseProgram(shader); /* 使用着色器程序 */
 
+    GLCall(int location = glGetUniformLocation(shader, "u_Color"));
+    ASSERT(location != -1);
+    GLCall(glUniform4f(location, 0.2f, 0.3f, 0.8f, 1.0f));
+
+    /* 解绑 */
+    GLCall(glBindVertexArray(0));
+    GLCall(glUseProgram(0));
+    GLCall(glBindBuffer(GL_ARRAY_BUFFER, 0));
+    GLCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0));
+
+    float r = 0.0f;
+    float increment = 0.05f;
+
     /* Loop until the user closes the window */
     while (!glfwWindowShouldClose(window))
     {
         /* Render here */
         glClear(GL_COLOR_BUFFER_BIT);
 
+        GLCall(glUseProgram(shader));
+        GLCall(glUniform4f(location, r, 0.3f, 0.8f, 1.0f));
+
+        GLCall(glBindVertexArray(vao));
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
+
         GLCall(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr)); // 绘制
+
+        if (r > 1.0f) 
+        {
+            increment = -0.05f;
+        }
+        else if (r < 0.0f) 
+        {
+            increment = 0.05f;
+        }
+        r += increment;
 
         /* Swap front and back buffers */
         glfwSwapBuffers(window);
