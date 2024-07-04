@@ -7,6 +7,7 @@
 #include "Renderer.h"
 #include "VertexBuffer.h"
 #include "IndexBuffer.h"
+#include"VertexArray.h"
 
 struct ShaderProgramSource
 {
@@ -134,14 +135,14 @@ int main(void)
             2, 3, 0
         };
 
-        unsigned int vao; /* 保存顶点数组对象ID */
-        GLCall(glGenVertexArrays(1, &vao)); /* 生存顶点数组 */
-        GLCall(glBindVertexArray(vao)); /* 绑定顶点数组 */
+        VertexArray va;
 
         VertexBuffer vb(positions, 4 * 2 * sizeof(float));
 
-        glEnableVertexAttribArray(0); /* 激活顶点属性-索引0-位置 */
-        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), 0); /* 设置顶点属性-索引0 */
+        VertexBufferLayout layout;
+        layout.Push < float>(2);
+
+        va.AddBuffer(vb,layout);
 
         IndexBuffer ib(indices, 6);
 
@@ -174,7 +175,7 @@ int main(void)
             GLCall(glUseProgram(shader));
             GLCall(glUniform4f(location, r, 0.3f, 0.8f, 1.0f));
 
-            GLCall(glBindVertexArray(vao));
+            va.Bind();
             ib.Bind();
 
             GLCall(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr)); // 绘制
