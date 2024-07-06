@@ -16,6 +16,7 @@
 #include"imgui/imgui.h"
 #include"imgui/imgui_impl_glfw_gl3.h"
 #include"tests/TestClearColor.h"
+#include"Test.h"
 
 int main(void)
 {
@@ -49,6 +50,7 @@ int main(void)
        
         GLCall(glEnable(GL_BLEND));
         GLCall(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
+        
 
         Renderer renderer;
 
@@ -56,34 +58,47 @@ int main(void)
         ImGui_ImplGlfwGL3_Init(window, true);
         ImGui::StyleColorsDark();
 
-      //  bool show_demo_window = true;
-      //  bool show_another_window = false;
-      //  ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
-
-        test::TestClearColor test;
+        test::Test* currentTest = nullptr;
+        test::TestMenu* testMenu = new test::TestMenu(currentTest);
+        currentTest = testMenu;
+        testMenu->RegisterTest<test::TestClearColor>("Clear Color");
+       
 
         /* Loop until the user closes the window */
         while (!glfwWindowShouldClose(window))
         {
             /* Render here */
+            GLCall(glClearColor(0.0f, 0.0f, 0.0f, 1.0f));
             renderer.Clear();
 
-            test.OnUpdate(0.0f);
-            test.OnRender();
-
             ImGui_ImplGlfwGL3_NewFrame();
-
-            test.OnImGuiRender();
+            if (currentTest)
+            {
+                currentTest->OnUpdate(0.0f);
+                currentTest->OnRender();
+                ImGui::Begin("Test");
+                if (currentTest != testMenu && ImGui::Button("<-"))
+                {
+                    delete currentTest;
+                    currentTest = testMenu;
+                }
+                currentTest->OnImGuiRender();
+                ImGui::End();
+            }
 
             ImGui::Render();
             ImGui_ImplGlfwGL3_RenderDrawData(ImGui::GetDrawData());
-
             /* Swap front and back buffers */
             glfwSwapBuffers(window);
-
             /* Poll for and process events */
             glfwPollEvents();
         }
+
+       // delete currentTest;
+       // if (currentTest != testMenu)
+       // {
+       //     delete testMenu;
+       // }
     }
 
     ImGui_ImplGlfwGL3_Shutdown();
