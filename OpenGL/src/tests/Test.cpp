@@ -17,7 +17,7 @@ namespace test
 			if (ImGui::Button(test.first.c_str())) 
 			{
 				m_CurrentTest = test.second();
-			}
+			}	
 		}
 	}
 }
